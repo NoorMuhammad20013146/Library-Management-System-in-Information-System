@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library Management System</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 text-gray-800">
+    <div class="container mx-auto mt-10">
+        <h1 class="text-3xl font-bold mb-5">Library Management System</h1>
+
+        <!-- Add/Edit Book Form -->
+        <div class="mb-5">
+            <input type="text" id="title" placeholder="Title" class="border p-2 mr-2">
+            <input type="text" id="author" placeholder="Author" class="border p-2 mr-2">
+            <input type="text" id="isbn" placeholder="ISBN" class="border p-2 mr-2">
+            <button id="add-edit-btn" onclick="addOrEditBook()" class="bg-blue-500 text-white px-4 py-2">Add Book</button>
+            <button id="cancel-btn" onclick="resetForm()" class="bg-gray-500 text-white px-4 py-2 hidden">Cancel</button>
+        </div>
+
+        <!-- Book List -->
+        <h2 class="text-2xl font-semibold mb-3">Book List</h2>
+        <table class="min-w-full bg-white">
+            <thead>
+                <tr>
+                    <th class="py-2">Title</th>
+                    <th class="py-2">Author</th>
+                    <th class="py-2">ISBN</th>
+                    <th class="py-2">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="book-list">
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        let editingBookId = null;
+
+        // Fetch and display all books
+        async function fetchBooks() {
+            const response = await fetch('/books');
+            const books = await response.json();
+            const bookList = document.getElementById('book-list');
+            bookList.innerHTML = books.map(book => `
+                <tr>
+                    <td class="py-2">${book.title}</td>
+                    <td class="py-2">${book.author}</td>
+                    <td class="py-2">${book.isbn}</td>
+                    <td class="py-2">
+                        <button onclick="editBook(${book.id}, '${book.title}', '${book.author}', '${book.isbn}')" class="bg-yellow-500 text-white px-2 py-1">Edit</button>
+                        <button onclick="deleteBook(${book.id})" class="bg-red-500 text-white px-2 py-1">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Add or Edit a book
+        async function addOrEditBook() {
+            const title = document.getElementById('title').value;
+            const author = document.getElementById('author').value;
+            const isbn = document.getElementById('isbn').value;
+
+            if (editingBookId) {
+                // Edit mode
+                await fetch(`/books/${editingBookId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, author, isbn })
+                });
+                editingBookId = null;
+                document.getElementById('add-edit-btn').textContent = 'Add Book';
+                document.getElementById('cancel-btn').classList.add('hidden');
+            } else {
+                // Add mode
+                await fetch('/books', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, author, isbn })
+                });
+            }
+            resetForm();
+            fetchBooks();
+        }
+
+        // Edit a book
+        function editBook(id, title, author, isbn) {
+            editingBookId = id;
+            document.getElementById('title').value = title;
+            document.getElementById('author').value = author;
+            document.getElementById('isbn').value = isbn;
+            document.getElementById('add-edit-btn').textContent = 'Update Book';
+            document.getElementById('cancel-btn').classList.remove('hidden');
+        }
+
+        // Cancel editing and reset form
+        function resetForm() {
+            editingBookId = null;
+            document.getElementById('title').value = '';
+            document.getElementById('author').value = '';
+            document.getElementById('isbn').value = '';
+            document.getElementById('add-edit-btn').textContent = 'Add Book';
+            document.getElementById('cancel-btn').classList.add('hidden');
+        }
+
+        // Delete a book
+        async function deleteBook(id) {
+            await fetch(`/books/${id}`, { method: 'DELETE' });
+            fetchBooks();
+        }
+
+        // Load books on page load
+        fetchBooks();
+    </script>
+</body>
+</html>
